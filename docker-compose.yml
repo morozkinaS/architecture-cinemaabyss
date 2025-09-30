@@ -15,10 +15,11 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./src/database/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d cinemaabyss"]  # ← добавил -d cinemaabyss
+      interval: 5s                                                   # ← уменьшил интервал
       timeout: 5s
-      retries: 5
+      retries: 10                                                    # ← увеличил попытки
+      start_period: 10s                                              # ← добавил start_period
     networks:
       - cinemaabyss-network
 
@@ -47,6 +48,12 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:                                                    # ← добавил healthcheck для kafka
+      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
     networks:
       - cinemaabyss-network
 
@@ -57,7 +64,8 @@ services:
       dockerfile: Dockerfile
     container_name: cinemaabyss-monolith
     depends_on:
-      - postgres
+      postgres:                                                     # ← исправил формат
+        condition: service_healthy                                  # ← добавил условие
     ports:
       - "8080:8080"
     environment:
@@ -73,7 +81,8 @@ services:
       dockerfile: Dockerfile
     container_name: cinemaabyss-movies-service
     depends_on:
-      - postgres
+      postgres:                                                     # ← исправил формат
+        condition: service_healthy                                  # ← добавил условие
     ports:
       - "8081:8081"
     environment:
@@ -89,8 +98,10 @@ services:
       dockerfile: Dockerfile
     container_name: cinemaabyss-events-service
     depends_on:
-      - postgres
-      - kafka
+      postgres:                                                     # ← исправил формат
+        condition: service_healthy                                  # ← добавил условие
+      kafka:                                                        # ← исправил формат
+        condition: service_healthy                                  # ← добавил условие
     ports:
       - "8082:8082"
     environment:
@@ -106,9 +117,12 @@ services:
       dockerfile: Dockerfile
     container_name: cinemaabyss-proxy-service
     depends_on:
-      - monolith
-      - movies-service
-      - events-service
+      monolith:                                                     # ← исправил формат
+        condition: service_started                                  # ← можно использовать started для приложений
+      movies-service:                                               # ← исправил формат
+        condition: service_started
+      events-service:                                               # ← исправил формат
+        condition: service_started
     ports:
       - "8000:8000"
     environment:
@@ -117,7 +131,7 @@ services:
       MOVIES_SERVICE_URL: http://movies-service:8081
       EVENTS_SERVICE_URL: http://events-service:8082
       GRADUAL_MIGRATION: "true"
-      MOVIES_MIGRATION_PERCENT: "50"
+      MOVIES_MIGRATION_PERCENT: "100"
     networks:
       - cinemaabyss-network
 
@@ -126,7 +140,8 @@ services:
     image: provectuslabs/kafka-ui:latest
     container_name: cinemaabyss-kafka-ui
     depends_on:
-      - kafka
+      kafka:                                                        # ← исправил формат
+        condition: service_healthy                                  # ← добавил условие
     ports:
       - "8090:8080"
     environment:
