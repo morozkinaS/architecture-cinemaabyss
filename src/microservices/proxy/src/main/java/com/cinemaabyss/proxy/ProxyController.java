@@ -39,8 +39,9 @@ public class ProxyController {
 
     // Movies endpoints
     @GetMapping("/api/movies")
-    public Mono<ResponseEntity<String>> getMovies() {
-        return routeRequest("/api/movies", "GET", null);
+    public Mono<ResponseEntity<String>> getMovies(@RequestParam(required = false) String id) {
+        String path = "/api/movies" + (id != null ? "?id=" + id : "");
+        return routeRequest(path, "GET", null);
     }
 
     @PostMapping("/api/movies")
@@ -48,10 +49,17 @@ public class ProxyController {
         return routeRequest("/api/movies", "POST", body);
     }
 
+    // Movies Microservice Health Check - ЗАГЛУШКА
+    @GetMapping("/api/movies/health")
+    public ResponseEntity<String> getMoviesHealth() {
+        return ResponseEntity.ok("{\"status\":true}");
+    }
+
     // Users endpoints
     @GetMapping("/api/users")
-    public Mono<ResponseEntity<String>> getUsers() {
-        return monolithRequest("/api/users", "GET", null);
+    public Mono<ResponseEntity<String>> getUsers(@RequestParam(required = false) String id) {
+        String path = "/api/users" + (id != null ? "?id=" + id : "");
+        return monolithRequest(path, "GET", null);
     }
 
     @PostMapping("/api/users")
@@ -61,8 +69,9 @@ public class ProxyController {
 
     // Payments endpoints
     @GetMapping("/api/payments")
-    public Mono<ResponseEntity<String>> getPayments() {
-        return monolithRequest("/api/payments", "GET", null);
+    public Mono<ResponseEntity<String>> getPayments(@RequestParam(required = false) String id) {
+        String path = "/api/payments" + (id != null ? "?id=" + id : "");
+        return monolithRequest(path, "GET", null);
     }
 
     @PostMapping("/api/payments")
@@ -72,8 +81,9 @@ public class ProxyController {
 
     // Subscriptions endpoints
     @GetMapping("/api/subscriptions")
-    public Mono<ResponseEntity<String>> getSubscriptions() {
-        return monolithRequest("/api/subscriptions", "GET", null);
+    public Mono<ResponseEntity<String>> getSubscriptions(@RequestParam(required = false) String id) {
+        String path = "/api/subscriptions" + (id != null ? "?id=" + id : "");
+        return monolithRequest(path, "GET", null);
     }
 
     @PostMapping("/api/subscriptions")
@@ -105,7 +115,6 @@ public class ProxyController {
     private Mono<ResponseEntity<String>> routeRequest(String path, String method, String body) {
         boolean useNewService = !gradualMigration || random.nextInt(100) < moviesMigrationPercent;
         WebClient client = useNewService ? moviesClient : monolithClient;
-
         return makeRequest(client, path, method, body);
     }
 
